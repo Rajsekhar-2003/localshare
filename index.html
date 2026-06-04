@@ -1,1 +1,620 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="/manifest.json">
+  <title>LocalShare | LAN File Sharing</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s;
+    }
+
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-secondary: #475569;
+      --border: #e2e8f0;
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --danger: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+    }
+
+    body.dark {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --text: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --border: #334155;
+      --primary: #60a5fa;
+      --primary-dark: #3b82f6;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      padding: 1rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), #8b5cf6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .badge {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2rem;
+      padding: 0.3rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button, .file-label {
+      background: var(--primary);
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 2rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: 0.2s;
+    }
+
+    button.secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    button:hover {
+      filter: brightness(0.95);
+      transform: translateY(-1px);
+    }
+
+    .files-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.2rem;
+      margin-top: 1.5rem;
+    }
+
+    .file-card {
+      background: var(--surface);
+      border-radius: 1.2rem;
+      border: 1px solid var(--border);
+      padding: 1rem;
+      box-shadow: var(--card-shadow);
+      transition: 0.1s;
+    }
+
+    .file-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .file-name {
+      font-weight: 600;
+      word-break: break-all;
+      font-size: 1rem;
+    }
+
+    .file-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 0.5rem 0;
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background: var(--primary);
+      transition: width 0.2s;
+    }
+
+    .upload-area {
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: 1.5rem;
+      padding: 2rem;
+      text-align: center;
+      margin: 1.5rem 0;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .upload-area.drag-over {
+      border-color: var(--primary);
+      background: rgba(59, 130, 246, 0.05);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--surface);
+      border-left: 4px solid var(--primary);
+      padding: 0.8rem 1.2rem;
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      max-width: 300px;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 0.8rem; }
+      .file-name { font-size: 0.9rem; }
+    }
+
+    .qr-section {
+      background: var(--surface);
+      border-radius: 1rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .qr-code {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .url-display {
+      font-family: monospace;
+      font-size: 0.9rem;
+      background: var(--bg);
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <span class="logo">📡 LocalShare</span>
+      <div class="badge" style="margin-top: 0.3rem;">🌐 Same Wi-Fi / LAN Only • No Login Required</div>
+    </div>
+    <div class="controls">
+      <button id="darkModeToggle" class="secondary">🌙 Dark Mode</button>
+    </div>
+  </div>
+
+  <!-- QR Code Section -->
+  <div class="qr-section" id="qrSection">
+    <div class="qr-code">
+      <div id="qrcode" style="width: 80px; height: 80px;"></div>
+      <div>
+        <div style="font-weight: 600;">📱 Scan to connect</div>
+        <div class="url-display" id="urlDisplay">Loading...</div>
+      </div>
+    </div>
+    <button id="copyUrlBtn" class="secondary">📋 Copy URL</button>
+  </div>
+
+  <!-- Upload Area -->
+  <div id="dropZone" class="upload-area">
+    <div>📁 Drag & Drop Files or Folders Here</div>
+    <div style="margin: 0.8rem 0;">or</div>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+      <label class="file-label" style="background: var(--primary-dark);">📎 Select Files
+        <input type="file" id="fileInput" multiple style="display: none;">
+      </label>
+      <label class="file-label" style="background: var(--primary-dark);">📂 Select Folder
+        <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;">
+      </label>
+    </div>
+    <div style="font-size: 0.75rem; margin-top: 0.8rem;">
+      ✅ Supports 5GB+ streaming • Resume interrupted uploads • Multiple files
+    </div>
+  </div>
+
+  <!-- Active Uploads -->
+  <div id="uploadsContainer"></div>
+
+  <!-- Shared Files -->
+  <h3>📂 Shared Files <span id="fileCountBadge"></span></h3>
+  <div id="fileList" class="files-grid">
+    <div class="file-card">Loading files...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+  // Configuration
+  const API_BASE = '';
+  const WS_PROTO = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  let WS_URL = `${WS_PROTO}//${window.location.host}/ws`;
+  let socket = null;
+  let currentUploads = new Map();
+
+  // Helper functions
+  function showToast(msg, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  // WebSocket Connection
+  function connectWebSocket() {
+    if (socket) socket.close();
+    socket = new WebSocket(WS_URL);
+    socket.onopen = () => console.log('WebSocket connected');
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'file_list') {
+          renderFileList(data.files);
+        } else if (data.type === 'upload_complete') {
+          fetchFileList();
+          showToast(`✅ ${data.filename} uploaded successfully`);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    socket.onerror = () => console.warn('WebSocket error');
+    socket.onclose = () => setTimeout(connectWebSocket, 3000);
+  }
+
+  // Fetch file list
+  async function fetchFileList() {
+    try {
+      const res = await fetch('/files');
+      const files = await res.json();
+      renderFileList(files);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function renderFileList(files) {
+    const container = document.getElementById('fileList');
+    if (!container) return;
+    
+    if (!files.length) {
+      container.innerHTML = '<div class="file-card">✨ No files shared yet. Drag & drop!</div>';
+      document.getElementById('fileCountBadge').innerText = '';
+      return;
+    }
+    
+    document.getElementById('fileCountBadge').innerText = ` (${files.length})`;
+    container.innerHTML = files.map(f => `
+      <div class="file-card">
+        <div class="file-info">
+          <div class="file-name">📄 ${escapeHtml(f.name)}</div>
+          <div class="file-meta">${formatBytes(f.size)} • ${new Date(f.modified * 1000).toLocaleString()}</div>
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.3rem;">
+            <button class="preview-btn" data-url="/download/${encodeURIComponent(f.name)}" style="background: var(--primary); padding:0.3rem 0.8rem;">👁️ Preview</button>
+            <button class="download-btn" data-url="/download/${encodeURIComponent(f.name)}" style="background: var(--success); padding:0.3rem 0.8rem;">⬇️ Download</button>
+            <button class="delete-btn" data-filename="${escapeHtml(f.name)}" style="background: var(--danger); padding:0.3rem 0.8rem;">🗑️</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    
+    // Attach events
+    document.querySelectorAll('.preview-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const url = btn.dataset.url;
+        window.open(url, '_blank');
+      });
+    });
+    
+    document.querySelectorAll('.download-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const url = btn.dataset.url;
+        window.location.href = url;
+      });
+    });
+    
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const filename = btn.dataset.filename;
+        if (confirm(`Delete ${filename}?`)) {
+          await deleteFile(filename);
+        }
+      });
+    });
+  }
+
+  async function deleteFile(filename) {
+    try {
+      const res = await fetch(`/files/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchFileList();
+        showToast(`🗑️ Deleted ${filename}`);
+      }
+    } catch (e) {
+      showToast('Delete failed');
+    }
+  }
+
+  // Upload with chunked resume support
+  const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks
+
+  async function uploadFiles(fileList, isFolder = false) {
+    for (let file of fileList) {
+      const displayName = isFolder && file.webkitRelativePath ? file.webkitRelativePath : file.name;
+      await uploadSingleFile(file, displayName);
+    }
+  }
+
+  async function uploadSingleFile(file, displayName) {
+    const uploadId = `${Date.now()}_${file.name}_${file.size}`;
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    let paused = false;
+    let currentChunk = 0;
+    
+    const uploadDiv = document.createElement('div');
+    uploadDiv.className = 'file-card';
+    uploadDiv.id = `upload_${uploadId}`;
+    uploadDiv.innerHTML = `
+      <div class="file-info">
+        <div class="file-name">📤 ${escapeHtml(displayName)}</div>
+        <div class="progress-bar"><div class="progress-fill" id="progress_${uploadId}"></div></div>
+        <div class="file-meta" id="status_${uploadId}">Starting...</div>
+        <button class="pause-resume-btn" data-id="${uploadId}" data-state="uploading" style="background: var(--warning);">⏸️ Pause</button>
+      </div>
+    `;
+    document.getElementById('uploadsContainer').prepend(uploadDiv);
+    
+    const progressFill = document.getElementById(`progress_${uploadId}`);
+    const statusSpan = document.getElementById(`status_${uploadId}`);
+    const btn = uploadDiv.querySelector('.pause-resume-btn');
+    
+    async function uploadChunk(chunkIndex) {
+      if (paused) return;
+      
+      const start = chunkIndex * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+      const formData = new FormData();
+      formData.append('chunk', chunk);
+      formData.append('filename', displayName);
+      formData.append('chunkIndex', chunkIndex);
+      formData.append('totalChunks', totalChunks);
+      formData.append('uploadId', uploadId);
+      formData.append('fileSize', file.size);
+      
+      try {
+        const res = await fetch('/upload/chunk', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!res.ok) throw new Error('Upload failed');
+        
+        const data = await res.json();
+        const uploadedBytes = Math.min(file.size, (chunkIndex + 1) * CHUNK_SIZE);
+        const percent = (uploadedBytes / file.size) * 100;
+        progressFill.style.width = `${percent}%`;
+        statusSpan.innerText = `${formatBytes(uploadedBytes)} / ${formatBytes(file.size)} (${Math.floor(percent)}%)`;
+        
+        if (data.status === 'complete') {
+          statusSpan.innerText = '✅ Complete!';
+          btn.remove();
+          setTimeout(() => uploadDiv.remove(), 2000);
+          fetchFileList();
+        } else if (chunkIndex + 1 < totalChunks && !paused) {
+          await uploadChunk(chunkIndex + 1);
+        }
+      } catch (err) {
+        if (!paused) {
+          statusSpan.innerText = `⚠️ Error, retrying chunk ${chunkIndex + 1}...`;
+          setTimeout(() => uploadChunk(chunkIndex), 2000);
+        }
+      }
+    }
+    
+    btn.onclick = () => {
+      if (btn.dataset.state === 'uploading') {
+        paused = true;
+        btn.innerText = '▶️ Resume';
+        btn.dataset.state = 'paused';
+        statusSpan.innerText = '⏸️ Paused';
+      } else {
+        paused = false;
+        btn.innerText = '⏸️ Pause';
+        btn.dataset.state = 'uploading';
+        statusSpan.innerText = '▶️ Resuming...';
+        uploadChunk(currentChunk);
+      }
+    };
+    
+    await uploadChunk(0);
+  }
+
+  // Drag & Drop handlers
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const folderInput = document.getElementById('folderInput');
+  
+  async function traverseFileTree(item, files, path = "") {
+    if (item.isFile) {
+      const file = await new Promise(resolve => item.file(resolve));
+      Object.defineProperty(file, 'webkitRelativePath', { value: path + file.name });
+      files.push(file);
+    } else if (item.isDirectory) {
+      const reader = item.createReader();
+      const entries = await new Promise(resolve => reader.readEntries(resolve));
+      for (const entry of entries) {
+        await traverseFileTree(entry, files, path + item.name + "/");
+      }
+    }
+    return files;
+  }
+  
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('drag-over');
+  });
+  
+  dropZone.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const items = e.dataTransfer.items;
+    let files = [];
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i].webkitGetAsEntry();
+      if (entry) {
+        await traverseFileTree(entry, files);
+      } else if (items[i].kind === 'file') {
+        files.push(items[i].getAsFile());
+      }
+    }
+    if (files.length) {
+      uploadFiles(files, true);
+    }
+  });
+  
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+      uploadFiles(Array.from(e.target.files));
+    }
+  });
+  
+  folderInput.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+      uploadFiles(Array.from(e.target.files), true);
+    }
+  });
+  
+  // Dark mode
+  const darkToggle = document.getElementById('darkModeToggle');
+  darkToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+  });
+  
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('dark');
+  }
+  
+  // QR Code and URL display
+  function initQRAndURL() {
+    const currentUrl = window.location.href;
+    document.getElementById('urlDisplay').innerText = currentUrl;
+    
+    // Generate QR code
+    new QRCode(document.getElementById("qrcode"), {
+      text: currentUrl,
+      width: 80,
+      height: 80,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+    
+    document.getElementById('copyUrlBtn').addEventListener('click', () => {
+      navigator.clipboard.writeText(currentUrl);
+      showToast('📋 URL copied to clipboard!');
+    });
+  }
+  
+  // Initialize
+  initQRAndURL();
+  connectWebSocket();
+  fetchFileList();
+  
+  // Auto-refresh file list every 5 seconds as fallback
+  setInterval(fetchFileList, 5000);
+</script>
+</body>
+</html>
