@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: localshare
+    runtime: python
+    repo: https://github.com/Rajsekhar-2003/localshare
+    buildCommand: pip install fastapi uvicorn python-multipart
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
